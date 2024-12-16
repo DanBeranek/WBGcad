@@ -1,17 +1,14 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Gssoft.Gscad.EditorInput;
 using Gssoft.Gscad.Runtime;
 using Gssoft.Gscad.DatabaseServices;
 using Gssoft.Gscad.Geometry;
-using Exception = Gssoft.Gscad.Runtime.Exception;
 
 namespace WB_GCAD25
 {
     public class Commands
     {
-        [CommandMethod("LOADMIAKO")]
+        [CommandMethod("NACTIMIAKO")]
         public void LoadMiakoBlocks()
         {
             bool validInput = false;
@@ -111,7 +108,7 @@ namespace WB_GCAD25
             Active.Database.SummaryInfo = newInfo;
         }
 
-        [CommandMethod("PLACEPOTS")]
+        [CommandMethod("POTPOLE")]
         public void PlacePOTBeams()
         {
             SpanPromptResult promptResult = SpanPrompter.PromptResult();
@@ -122,18 +119,27 @@ namespace WB_GCAD25
             MiakoPlacer miakoPlacer = new MiakoPlacer(intervalResult, promptResult);
         }
         
-        [CommandMethod("DESKA")]
-        public void Deska()
+        [CommandMethod("KRESLIDESKU")]
+        public void DrawSlab()
         {
-            Polyline pl = new Polyline();
-            pl.CreatePolylineWithXDict("WB_DESKA_OBRYS");
+            BulgePolyJig jig = new BulgePolyJig(Active.Editor.CurrentUserCoordinateSystem);
+            Polyline pl = jig.RunBulgePolyJig();
+            Helpers.SetLayer("WB_DESKA_OBRYS", pl);
+        }
+        
+        [CommandMethod("KRESLIPROSTUP")]
+        public void DrawHole()
+        {
+            BulgePolyJig jig = new BulgePolyJig(Active.Editor.CurrentUserCoordinateSystem);
+            Polyline pl = jig.RunBulgePolyJig();
+
+            (int idx1, int idx2, int idx3) = PolylineAnalyzer.FindLongestNeighbourSegments(pl);
+            // Helpers.SetLayer("WB_DESKA_PROSTUP", pl);
+            // PRO SRAFU: WB_DESKA_PROSTUP_SRAFA
         }
         
         
         
-
-        
-
         [CommandMethod("AddExtensionDictionary")]
         public void AddExtensionDictionary()
         {
