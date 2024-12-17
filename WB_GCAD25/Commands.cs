@@ -129,6 +129,7 @@ namespace WB_GCAD25
             Polyline pl = jig.RunBulgePolyJig();
             if (pl == null) return; 
             Helpers.SetLayer("WB_DESKA_OBRYS", pl);
+            CustomDataFunctions.StoreKeyValue(pl.ObjectId, "TLOUSTKA", 250.0);
         }
         
         [CommandMethod("KRESLIPROSTUP")]
@@ -139,6 +140,7 @@ namespace WB_GCAD25
             if (pl == null) return;
             
             Helpers.SetLayer("WB_DESKA_PROSTUP", pl);
+            CustomDataFunctions.StoreKeyValue(pl.ObjectId, "TLOUSTKA", 250.0);
             
             (int idx1, int idx2, int idx3) = PolylineAnalyzer.FindLongestNeighbourSegments(pl);
             // Get points
@@ -198,89 +200,55 @@ namespace WB_GCAD25
             });
             Helpers.SetLayer("WB_DESKA_PROSTUP_SRAFA", hatch);
         }
-        
-        [CommandMethod("AddExtensionDictionary")]
-        public void AddExtensionDictionary()
+
+        [CommandMethod("NASTAVTLOUSTKU")]
+        public void SetThickness()
         {
-            Active.UsingTranscation(tr =>
+            PromptDoubleOptions pdo = new PromptDoubleOptions("\nZadej tloušťku v mm: ");
+            pdo.AllowNegative = false;
+            pdo.AllowZero = false;
+            
+            // Default value
+            DatabaseSummaryInfo info = Active.Database.SummaryInfo;
+            DatabaseSummaryInfoBuilder builder = new DatabaseSummaryInfoBuilder(info);
+            IDictionary<string, string> dict = (IDictionary<string, string>)builder.CustomPropertyTable;
+            pdo.DefaultValue = double.Parse(dict["STROP"]);
+
+            PromptDoubleResult pdr = Active.Editor.GetDouble(pdo);
+
+            double thickness = pdr.Value;
+            
+            PromptSelectionResult psr = Active.Editor.GetSelection();
+            if (psr.Status != PromptStatus.OK)
             {
-                PromptEntityOptions prompt = new PromptEntityOptions("\nDo you want to add extension dictionary?");
-                PromptEntityResult result = Active.Editor.GetEntity(prompt);
-
-                if (result.Status != PromptStatus.OK)
-                {
-                    return;
-                }
-                
-                PromptDoubleOptions pDoOpt = new PromptDoubleOptions("\nHow much?");
-                PromptDoubleResult pResult = Active.Editor.GetDouble(pDoOpt);
-
-                if (pResult.Status != PromptStatus.OK)
-                {
-                    return;
-                }
-
-                Entity ent = (Entity)tr.GetObject(result.ObjectId, OpenMode.ForWrite);
-
-                if (!ent.ExtensionDictionary.IsValid)
-                {
-                    ent.CreateExtensionDictionary();
-                }
-                
-                DBDictionary extDict = (DBDictionary)tr.GetObject(ent.ExtensionDictionary, OpenMode.ForWrite);
-                
-                Xrecord xrecord = new Xrecord
-                {
-                    Data = new ResultBuffer(
-                        new TypedValue((int)DxfCode.Real, pResult.Value)
-                    )
-                };
-                extDict.SetAt("SlabHeight", xrecord);
-                tr.AddNewlyCreatedDBObject(ent, true);
-            });
-        }
-
-        [CommandMethod("GetExtensionDictionary")]
-        public void GetExtensionDictionary()
-        {
-            Active.UsingTranscation(tr =>
+                Active.Editor.WriteMessage("\nNo selection provided.");
+                return;
+            }
+            SelectionSet ss = psr.Value;
+            foreach (SelectedObject selObj in ss)
             {
-                PromptEntityOptions prompt = new PromptEntityOptions("\nDo you want to add extension dictionary?");
-                PromptEntityResult result = Active.Editor.GetEntity(prompt);
-
-                if (result.Status != PromptStatus.OK)
-                {
-                    return;
-                }
-
-                Entity ent = (Entity)tr.GetObject(result.ObjectId, OpenMode.ForWrite);
-
-                if (ent.ExtensionDictionary.IsValid)
-                {
-                    DBDictionary extDict = (DBDictionary)tr.GetObject(ent.ExtensionDictionary, OpenMode.ForRead);
-                    if (extDict.Contains("SlabHeight"))
-                    {
-                        Xrecord xrecord = (Xrecord)tr.GetObject(extDict.GetAt("SlabHeight"), OpenMode.ForRead);
-
-                        if (xrecord != null)
-                        {
-                            foreach (TypedValue val in xrecord.Data)
-                            {
-                                if (val.TypeCode == (int)DxfCode.Real)
-                                {
-                                    Active.Editor.WriteMessage($"\nSlab height: {val.Value}");
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Active.Editor.WriteMessage("\nNo slab height data found");
-                    }
-                }
-            });
+                if (selObj == null) continue; ;
+                CustomDataFunctions.StoreKeyValue(selObj.ObjectId, "TLOUSTKA", thickness);
+            }
         }
         
-        
+        [CommandMethod("UKAZTLOUSTKU")]
+        public void ShowThickness()
+        {
+            PromptSelectionResult psr = Active.Editor.GetSelection();
+            if (psr.Status != PromptStatus.OK)
+            {
+                Active.Editor.WriteMessage("\nNo selection provided.");
+                return;
+            }
+            SelectionSet ss = psr.Value;
+            foreach (SelectedObject selObj in ss)
+            {
+                if (selObj == null) continue; ;
+                double thick = (double)CustomDataFunctions.GetValue(selObj.ObjectId, "TLOUSTKA");
+                
+                Active.Editor.WriteMessage($"\nTloušťka: {thick} mm.");
+            }
+        }
     }
 }
