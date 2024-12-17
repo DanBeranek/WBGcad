@@ -64,7 +64,7 @@ namespace WB_GCAD25
                 if (ent == null || !ent.ExtensionDictionary.IsValid) 
                     return;
                 
-                DBDictionary extDict = (DBDictionary)tr.GetObject(objectId, OpenMode.ForWrite);
+                DBDictionary extDict = (DBDictionary)tr.GetObject(ent.ExtensionDictionary, OpenMode.ForRead);
                 
                 if (!extDict.Contains(key)) 
                     return;
