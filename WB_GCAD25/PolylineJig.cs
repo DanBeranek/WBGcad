@@ -1,6 +1,7 @@
 // https://through-the-interface.typepad.com/through_the_interface/2010/12/jigging-an-autocad-polyline-with-arc-segments-using-net.html
 
 using System;
+using Gssoft.Gscad.ApplicationServices;
 using Gssoft.Gscad.DatabaseServices;
 using Gssoft.Gscad.EditorInput;
 using Gssoft.Gscad.Geometry;
@@ -97,11 +98,14 @@ namespace WB_GCAD25
         {
             JigPromptPointOptions jigOpts = new JigPromptPointOptions();
             jigOpts.UserInputControls =
-                (UserInputControls.Accept3dCoordinates |
-                 UserInputControls.NullResponseAccepted |
-                 UserInputControls.NoNegativeResponseAccepted |
-                 UserInputControls.GovernedByOrthoMode);
+            (
+                UserInputControls.Accept3dCoordinates 
+                | UserInputControls.NullResponseAccepted 
+                | UserInputControls.NoNegativeResponseAccepted 
+                | UserInputControls.GovernedByOrthoMode
+            );
             _isUndoing = false;
+            
             Polyline pline = Entity as Polyline;
             
             if (pline.NumberOfVertices == 1)
