@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
+using Gssoft.Gscad.BoundaryRepresentation;
 using Gssoft.Gscad.EditorInput;
 using Gssoft.Gscad.Runtime;
 using Gssoft.Gscad.DatabaseServices;
 using Gssoft.Gscad.Geometry;
+using Gssoft.Gscad.Internal;
 
 namespace WB_GCAD25
 {
@@ -124,6 +127,7 @@ namespace WB_GCAD25
         {
             BulgePolyJig jig = new BulgePolyJig(Active.Editor.CurrentUserCoordinateSystem);
             Polyline pl = jig.RunBulgePolyJig();
+            if (pl == null) return; 
             Helpers.SetLayer("WB_DESKA_OBRYS", pl);
         }
         
@@ -132,13 +136,67 @@ namespace WB_GCAD25
         {
             BulgePolyJig jig = new BulgePolyJig(Active.Editor.CurrentUserCoordinateSystem);
             Polyline pl = jig.RunBulgePolyJig();
-
+            if (pl == null) return;
+            
+            Helpers.SetLayer("WB_DESKA_PROSTUP", pl);
+            
             (int idx1, int idx2, int idx3) = PolylineAnalyzer.FindLongestNeighbourSegments(pl);
-            // Helpers.SetLayer("WB_DESKA_PROSTUP", pl);
-            // PRO SRAFU: WB_DESKA_PROSTUP_SRAFA
+            // Get points
+            Point2d pt1 = pl.GetPoint2dAt(idx1);
+            Point2d pt2 = pl.GetPoint2dAt(idx2);
+            Point2d pt3 = pl.GetPoint2dAt(idx3);
+
+            Vector2d a = new Vector2d(pt2.X - pt1.X, pt2.Y - pt1.Y);
+            Vector2d b = new Vector2d(pt2.X - pt3.X, pt2.Y - pt3.Y);
+            
+            Vector2d bisectorVector = (a.GetNormal() + b.GetNormal()).GetNormal();
+            double distance = Math.Min(a.Length, b.Length) / 5;
+
+            Point2d pt4 = pt2 + bisectorVector * distance;
+
+            PointContainment ptContainment = Containment.GetPointContainment(pl, new Point3d(new Plane(), pt4));
+
+            if (ptContainment != PointContainment.Inside)
+            {
+                pt4 = pt2 - bisectorVector * distance;
+            }
+            
+            Polyline hatchPl = null;
+            Active.UsingTranscation(tr =>
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForWrite);
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+
+                hatchPl = new Polyline();
+                hatchPl.AddVertexAt(0, pt1, 0, 0, 0);
+                hatchPl.AddVertexAt(0, pt2, 0, 0, 0);
+                hatchPl.AddVertexAt(0, pt3, 0, 0, 0);
+                hatchPl.AddVertexAt(0, pt4, 0, 0, 0);
+                hatchPl.Closed = true;
+                btr.AppendEntity(hatchPl);
+                tr.AddNewlyCreatedDBObject(hatchPl, true);
+            });
+            Helpers.SetLayer("WB_DESKA_PROSTUP_SRAFA", hatchPl);
+            ObjectIdCollection objIds = new ObjectIdCollection();
+            objIds.Add(hatchPl.Id);
+
+            Hatch hatch = null;
+            Active.UsingTranscation(tr =>
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForWrite);
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[BlockTableRecord.ModelSpace], OpenMode.ForWrite);
+                
+                hatch = new Hatch();
+                
+                hatch.SetHatchPattern(HatchPatternType.PreDefined, "SOLID");
+                hatch.AppendLoop(HatchLoopTypes.Default, objIds);
+                hatch.EvaluateHatch(true);
+                hatch.Associative = true;
+                btr.AppendEntity(hatch);
+                tr.AddNewlyCreatedDBObject(hatch, true);
+            });
+            Helpers.SetLayer("WB_DESKA_PROSTUP_SRAFA", hatch);
         }
-        
-        
         
         [CommandMethod("AddExtensionDictionary")]
         public void AddExtensionDictionary()
