@@ -188,12 +188,13 @@ namespace WB_GCAD25
                 
                 hatch = new Hatch();
                 
-                hatch.SetHatchPattern(HatchPatternType.PreDefined, "SOLID");
-                hatch.AppendLoop(HatchLoopTypes.Default, objIds);
-                hatch.EvaluateHatch(true);
-                hatch.Associative = true;
                 btr.AppendEntity(hatch);
                 tr.AddNewlyCreatedDBObject(hatch, true);
+                
+                hatch.SetHatchPattern(HatchPatternType.PreDefined, "SOLID");
+                hatch.Associative = true;
+                hatch.AppendLoop(HatchLoopTypes.Default, objIds);
+                hatch.EvaluateHatch(true);
             });
             Helpers.SetLayer("WB_DESKA_PROSTUP_SRAFA", hatch);
         }
