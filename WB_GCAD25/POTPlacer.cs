@@ -66,7 +66,7 @@ namespace WB_GCAD25
                             Helpers.SetDynamicBlockProperty("DELKA", beamsLength, blockRef);
                             
                             tr.AddNewlyCreatedDBObject(blockRef, true);
-                            IDictionary<string, AttributeReference> attributes = blockRef.AppendAttributes(tr);
+                            blockRef.AppendAttributes(tr);
                         }
                     }
                 }
