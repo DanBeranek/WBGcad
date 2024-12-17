@@ -10,14 +10,15 @@ namespace WB_GCAD25
             Active.UsingTranscation(tr =>
             {
                 // Check if the layer already exists
-                LayerTable table = (LayerTable)tr.GetObject(Active.Database.LayerTableId, OpenMode.ForRead);
+                LayerTable table = (LayerTable)tr.GetObject(Active.Database.LayerTableId, OpenMode.ForWrite);
 
                 if (!table.Has(layerName))
                 {
                     throw new Exception($"\nLayer {layerName} not found");
                 }
 
-                entity.Layer = layerName;
+                Entity ent = (Entity)tr.GetObject(entity.ObjectId, OpenMode.ForWrite);
+                ent.Layer = layerName;
             });
         }
 
