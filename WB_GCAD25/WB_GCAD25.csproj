@@ -59,6 +59,7 @@
         <Compile Include="BlockReferenceExtensions.cs" />
         <Compile Include="Commands.cs" />
         <Compile Include="Containment.cs" />
+        <Compile Include="CustomDataFunctions.cs" />
         <Compile Include="Helpers.cs" />
         <Compile Include="IntervalFinder.cs" />
         <Compile Include="IntervalResult.cs" />
