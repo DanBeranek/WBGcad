@@ -56,6 +56,7 @@
     <ItemGroup>
         <Compile Include="Active.cs" />
         <Compile Include="BlockImporter.cs" />
+        <Compile Include="InsulationDrawJig.cs" />
         <Compile Include="MiakoArrayDrawJig.cs" />
         <Compile Include="BlockReferenceExtensions.cs" />
         <Compile Include="Commands.cs" />

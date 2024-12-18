@@ -24,14 +24,19 @@ namespace WB_GCAD25
 
         public static void SetDynamicBlockProperty(string propertyName, double value, BlockReference blockReference)
         {
-            DynamicBlockReferencePropertyCollection props = blockReference.DynamicBlockReferencePropertyCollection;
-            foreach (DynamicBlockReferenceProperty prop in props)
+            Active.UsingTranscation(tr =>
             {
-                if (prop.PropertyName == propertyName && !prop.ReadOnly)
+                BlockReference br = (BlockReference)tr.GetObject(blockReference.ObjectId, OpenMode.ForWrite);
+                
+                DynamicBlockReferencePropertyCollection props = br.DynamicBlockReferencePropertyCollection;
+                foreach (DynamicBlockReferenceProperty prop in props)
                 {
-                    prop.Value = value;
+                    if (prop.PropertyName == propertyName && !prop.ReadOnly)
+                    {
+                        prop.Value = value;
+                    }
                 }
-            }
+            });
         }
     }
 }

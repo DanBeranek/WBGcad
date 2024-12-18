@@ -191,14 +191,6 @@ namespace WB_GCAD25
                                 
                                 Point2dCollection ptCol = new Point2dCollection();
                                 
-                                // Point3d pt3 = cellPt + dir.GetPerpendicularVector() * 80;
-                                // Point3d pt4 = _mEndPt + dir.GetPerpendicularVector() * 80;
-                                //
-                                // ptCol.Add(new Point2d(cellPt.X, cellPt.Y));
-                                // ptCol.Add(new Point2d(_mEndPt.X, _mEndPt.Y));
-                                // ptCol.Add(new Point2d(pt3.X, pt3.Y));
-                                // ptCol.Add(new Point2d(pt4.X, pt4.Y));
-                                
                                 Point3d pt1 = new Point3d(0, 0, 0);
                                 Point3d pt2 = new Point3d(length % 500, 80, 0);
                                 pt1.TransformBy(mat);

@@ -180,6 +180,30 @@ namespace WB_GCAD25
             NODHelper.SaveUserPromptToNOD(data);
         }
         
+        [CommandMethod("IZOLACE")]
+        public void PlaceInsulation()
+        {
+            try
+            {
+                InsulationDrawJig jigger = new InsulationDrawJig();
+                using (Transaction tr = Active.Database.TransactionManager.StartTransaction())
+                {
+                    if (jigger.Jig())
+                    {
+                        tr.Commit();
+                    }
+                    else
+                    {
+                        tr.Abort();
+                    }
+                }
+            }
+            catch (SystemException ex)
+            {
+                Active.Editor.WriteMessage(ex.ToString());
+            }
+        }
+        
         [CommandMethod("MIAKO")]
         public void PlaceMiakoArray()
         {
