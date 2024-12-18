@@ -14,6 +14,8 @@ namespace WB_GCAD25
         [CommandMethod("NACTIMIAKO")]
         public void LoadMiakoBlocks()
         {
+            NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
+            
             bool validInput = false;
             double thickness = 0.0;
             while (!validInput)
@@ -21,7 +23,7 @@ namespace WB_GCAD25
                 PromptDoubleOptions pdo = new PromptDoubleOptions("\nZadej tloušťku stropu: ");
                 pdo.AllowNone = false;
                 pdo.AllowArbitraryInput = false;
-                pdo.DefaultValue = 250.0;
+                pdo.DefaultValue = data.LastThickness;
                 pdo.UseDefaultValue = true;
                 PromptDoubleResult pdr = Active.Editor.GetDouble(pdo);
                 if (pdr.Status != PromptStatus.OK)
@@ -41,6 +43,10 @@ namespace WB_GCAD25
                     validInput = true;
                 }
             }
+            
+            data.LastThickness = thickness;
+            data.SlabThickness = thickness;
+            data.IsBN = false;
 
             double concreteThickness = 60.0;
             BlockImporter importer = new BlockImporter();
@@ -53,26 +59,27 @@ namespace WB_GCAD25
             {
                 PromptKeywordOptions pko = new PromptKeywordOptions("\nVyber typ stropu: ")
                 {
-                    Keywords = { "S nadbetonávkou", "Bez nadbetonávky" },
+                    Keywords = { "SN", "BN" },
                     AllowNone = false
                 };
-                pko.Keywords.Default = "S nadbetonávkou";
+                pko.Keywords.Default = "SN";
                 PromptResult pr = Active.Editor.GetKeywords(pko);
                 if (pr.Status != PromptStatus.OK)
                 {
                     Active.Editor.WriteMessage("\nPříkaz zrušen ");
                     return;
                 }
-
-                switch (pr.StringResult)
+                
+                switch (pr.StringResult.ToUpper())
                 {
-                    case "S nadbetonávkou":
+                    case "SN":
                         importer.ImportBlocks("D:\\_WB - kopie\\vlozky_250.dwg");
                         concreteThickness = thickness - 190.0;
                         break;
-                    case "Bez nadbetonávky":
+                    case "BN":
                         importer.ImportBlocks("D:\\_WB - kopie\\vlozky_BNK.dwg");
                         concreteThickness = 0.0;
+                        data.IsBN = true;
                         break;
                 }
             }
@@ -86,7 +93,7 @@ namespace WB_GCAD25
                 importer.ImportBlocks("D:\\_WB - kopie\\vlozky_290.dwg");
                 concreteThickness = thickness - 230.0;
             }
-
+            
             DatabaseSummaryInfo info = Active.Database.SummaryInfo;
             DatabaseSummaryInfoBuilder builder = new DatabaseSummaryInfoBuilder(info);
             IDictionary<string, string> dict = (IDictionary<string, string>)builder.CustomPropertyTable;
@@ -109,6 +116,8 @@ namespace WB_GCAD25
 
             DatabaseSummaryInfo newInfo = builder.ToDatabaseSummaryInfo();
             Active.Database.SummaryInfo = newInfo;
+            
+            NODHelper.SaveUserPromptToNOD(data);
         }
 
         [CommandMethod("POTPOLE")]
@@ -121,7 +130,126 @@ namespace WB_GCAD25
             
             MiakoPlacer miakoPlacer = new MiakoPlacer(intervalResult, promptResult);
         }
+
+        [CommandMethod("MIAKO")]
+        public void PlaceMiako()
+        {
+            string blockName = GetMiakoBlockName();
+
+            if (blockName == null) return;
+
+            Active.UsingTranscation(tr =>
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForRead);
+
+                if (!bt.Has(blockName))
+                {
+                    Active.Editor.WriteMessage($"\nBlock {blockName} not found.");
+                    tr.Abort();
+                    return;
+                }
+
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[blockName], OpenMode.ForRead);
+
+                BlockReference br = new BlockReference(new Point3d(0, 0, 0), btr.ObjectId);
+
+                if (BlockMovingRotating.Jig(br))
+                {
+                    BlockTableRecord modelspace =
+                        (BlockTableRecord)tr.GetObject(Active.Database.CurrentSpaceId, OpenMode.ForWrite);
+                    modelspace.AppendEntity(br);
+                    Helpers.SetLayer("WB_MIAKO", br);
+                    tr.AddNewlyCreatedDBObject(br, true);
+                }
+            });
+        }
         
+        [CommandMethod("MIAKOPOLE")]
+        public void PlaceMiakoArray()
+        {
+            string blockName = GetMiakoBlockName();
+
+            if (blockName == null) return;
+
+            Active.UsingTranscation(tr =>
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForRead);
+
+                if (!bt.Has(blockName))
+                {
+                    Active.Editor.WriteMessage($"\nBlock {blockName} not found.");
+                    tr.Abort();
+                    return;
+                }
+
+                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[blockName], OpenMode.ForRead);
+
+                BlockReference br = new BlockReference(new Point3d(0, 0, 0), btr.ObjectId);
+
+                if (BlockMovingRotating.Jig(br))
+                {
+                    BlockTableRecord modelspace =
+                        (BlockTableRecord)tr.GetObject(Active.Database.CurrentSpaceId, OpenMode.ForWrite);
+                    modelspace.AppendEntity(br);
+                    Helpers.SetLayer("WB_MIAKO", br);
+                    tr.AddNewlyCreatedDBObject(br, true);
+                }
+            });
+        }
+
+        private static string GetMiakoBlockName()
+        {
+            NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
+            
+            PromptKeywordOptions pkoOVN = new PromptKeywordOptions("\nVyber OVN: ")
+            {
+                Keywords = { "625", "500" },
+                AllowNone = false
+            };
+            pkoOVN.Keywords.Default = data.LastOVN;
+            
+            PromptResult pr = Active.Editor.GetKeywords(pkoOVN);
+            
+            if (pr.Status != PromptStatus.OK)
+            {
+                Active.Editor.WriteMessage("\nPříkaz zrušen ");
+                return null;
+            }
+            
+            string OVN = pr.StringResult;
+            data.LastOVN = OVN;
+            
+            PromptKeywordOptions pkoHeight = new PromptKeywordOptions("\nVyber výšku vložky: ")
+            {
+                Keywords = { "PULENA80", "80", "150" },
+                AllowNone = false,
+                AllowArbitraryInput = true,
+            };
+            if (data.SlabThickness >= 250.0) pkoHeight.Keywords.Add("190");
+            if (data.SlabThickness >= 290.0) pkoHeight.Keywords.Add("230");
+            if (data.IsBN) pkoHeight.Keywords.Add("250");
+
+            pkoHeight.Keywords.Default = data.LastMiako;
+            
+            PromptResult pr2 = Active.Editor.GetKeywords(pkoHeight);
+
+            if (pr2.Status != PromptStatus.OK)
+            {
+                Active.Editor.WriteMessage("\nPříkaz zrušen ");
+                return null;
+            }
+            
+            string miakoHeight = pr2.StringResult;
+            data.LastMiako = miakoHeight;
+
+            string blockName = miakoHeight.Contains("PULENA")
+                ? $"MIAKO_80_{OVN}_PULENA"
+                : $"MIAKO_{miakoHeight}_{OVN}";
+            NODHelper.SaveUserPromptToNOD(data);
+
+            return blockName;
+        }
+
         [CommandMethod("KRESLIDESKU")]
         public void DrawSlab()
         {
@@ -204,19 +332,17 @@ namespace WB_GCAD25
         [CommandMethod("NASTAVTLOUSTKU")]
         public void SetThickness()
         {
+            NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
+            
             PromptDoubleOptions pdo = new PromptDoubleOptions("\nZadej tloušťku v mm: ");
             pdo.AllowNegative = false;
             pdo.AllowZero = false;
-            
-            // Default value
-            DatabaseSummaryInfo info = Active.Database.SummaryInfo;
-            DatabaseSummaryInfoBuilder builder = new DatabaseSummaryInfoBuilder(info);
-            IDictionary<string, string> dict = (IDictionary<string, string>)builder.CustomPropertyTable;
-            pdo.DefaultValue = double.Parse(dict["STROP"]);
+            pdo.DefaultValue = data.LastThickness;
 
             PromptDoubleResult pdr = Active.Editor.GetDouble(pdo);
 
             double thickness = pdr.Value;
+            data.LastThickness = thickness;
             
             PromptSelectionResult psr = Active.Editor.GetSelection();
             if (psr.Status != PromptStatus.OK)
@@ -230,6 +356,8 @@ namespace WB_GCAD25
                 if (selObj == null) continue; ;
                 CustomDataFunctions.StoreKeyValue(selObj.ObjectId, "TLOUSTKA", thickness);
             }
+            
+            NODHelper.SaveUserPromptToNOD(data);
         }
         
         [CommandMethod("UKAZTLOUSTKU")]
@@ -249,6 +377,12 @@ namespace WB_GCAD25
                 
                 Active.Editor.WriteMessage($"\nTloušťka: {thick} mm.");
             }
+        }
+
+        [CommandMethod("CTIUSERPROMPTDATA")]
+        public void ReadUserPromptData()
+        {
+            NODHelper.WriteUserPromptToConsole();
         }
     }
 }
