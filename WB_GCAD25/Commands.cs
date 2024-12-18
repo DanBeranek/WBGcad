@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Gssoft.Gscad.BoundaryRepresentation;
 using Gssoft.Gscad.EditorInput;
 using Gssoft.Gscad.Runtime;
@@ -159,18 +160,118 @@ namespace WB_GCAD25
             }
         }
 
-        private static string GetMiakoBlockName()
+        [CommandMethod("CHANGEMIAKO")]
+        public void ChangeMiako()
+        {
+            string miakoHeight = GetMiakoHeight();
+            if (miakoHeight == null) return;
+            
+            string miakoBlockName500 = miakoHeight.Contains("PULENA")
+                ? "MIAKO_80_500_PULENA"
+                : $"MIAKO_{miakoHeight}_500";
+            
+            string miakoBlockName625 = miakoHeight.Contains("PULENA")
+                ? "MIAKO_80_625_PULENA"
+                : $"MIAKO_{miakoHeight}_625";
+            
+            Active.UsingTranscation(tr =>
+            {
+                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForRead);
+                if (bt == null)
+                {
+                    Active.Editor.WriteMessage("\nUnable to access the Block Table.");
+                    tr.Abort();
+                    return;
+                }
+
+                // Check if the required blocks exist
+                bool blocksExist = true;
+
+                if (!bt.Has(miakoBlockName500))
+                {
+                    Active.Editor.WriteMessage($"\nBlock {miakoBlockName500} not found.");
+                    blocksExist = false;
+                }
+
+                if (!bt.Has(miakoBlockName625))
+                {
+                    Active.Editor.WriteMessage($"\nBlock {miakoBlockName625} not found.");
+                    blocksExist = false;
+                }
+
+                if (!blocksExist)
+                {
+                    tr.Abort();
+                    return;
+                }
+                BlockTableRecord miako500 = (BlockTableRecord)tr.GetObject(bt[miakoBlockName500], OpenMode.ForRead);
+                BlockTableRecord miako625 = (BlockTableRecord)tr.GetObject(bt[miakoBlockName625], OpenMode.ForRead);
+                
+                if (miako500 == null || miako625 == null)
+                {
+                    Active.Editor.WriteMessage("\nUnable to access one or both BlockTableRecords.");
+                    tr.Abort();
+                    return;
+                }
+                
+                PromptSelectionResult promptResult = Active.Editor.GetSelection();
+                
+                if (promptResult.Status != PromptStatus.OK)
+                {
+                    Active.Editor.WriteMessage("\nNo objects selected.");
+                    tr.Abort();
+                    return;
+                }
+                
+                if (promptResult.Status == PromptStatus.OK)
+                {
+                    
+                    SelectionSet sSet = promptResult.Value;
+
+                    foreach (SelectedObject so in sSet)
+                    {
+                        if (so == null) continue;
+
+                        DBObject obj = tr.GetObject(so.ObjectId, OpenMode.ForWrite);
+                        if (obj is BlockReference br)
+                        {
+                            // Get current block name
+                            BlockTableRecord btr = (BlockTableRecord)tr.GetObject(br.BlockTableRecord, OpenMode.ForRead);
+                            string currentBlockName = btr.Name;
+
+                            if (currentBlockName != null && currentBlockName.Contains("MIAKO"))
+                            {
+                                BlockTableRecord sourceBlockTableRecord = null;
+                                if (currentBlockName.Contains("500"))
+                                {
+                                    sourceBlockTableRecord = miako500;
+                                }
+                                else
+                                {
+                                    sourceBlockTableRecord = miako625;
+                                }
+                                
+                                BlockReference targetBlockReference = (BlockReference)tr.GetObject(br.ObjectId, OpenMode.ForWrite);
+                                targetBlockReference.BlockTableRecord = sourceBlockTableRecord.ObjectId;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        private static string GetMiakoOVN()
         {
             NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
             
-            PromptKeywordOptions pkoOVN = new PromptKeywordOptions("\nVyber OVN: ")
+            PromptKeywordOptions pko = new PromptKeywordOptions("\nVyber OVN: ")
             {
                 Keywords = { "625", "500" },
                 AllowNone = false
             };
-            pkoOVN.Keywords.Default = data.LastOVN;
+            pko.Keywords.Default = data.LastOVN;
             
-            PromptResult pr = Active.Editor.GetKeywords(pkoOVN);
+            PromptResult pr = Active.Editor.GetKeywords(pko);
             
             if (pr.Status != PromptStatus.OK)
             {
@@ -181,33 +282,71 @@ namespace WB_GCAD25
             string OVN = pr.StringResult;
             data.LastOVN = OVN;
             
-            PromptKeywordOptions pkoHeight = new PromptKeywordOptions("\nVyber výšku vložky: ")
+            NODHelper.SaveUserPromptToNOD(data);
+            
+            return OVN;
+        }
+
+        private static string GetMiakoHeight()
+        {
+            NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
+            
+            PromptKeywordOptions pko = new PromptKeywordOptions("\nVyber výšku vložky: ")
             {
                 Keywords = { "PULENA80", "80", "150" },
                 AllowNone = false,
                 AllowArbitraryInput = true,
             };
-            if (data.SlabThickness >= 250.0) pkoHeight.Keywords.Add("190");
-            if (data.SlabThickness >= 290.0) pkoHeight.Keywords.Add("230");
-            if (data.IsBN) pkoHeight.Keywords.Add("250");
-
-            pkoHeight.Keywords.Default = data.LastMiako;
+            if (data.SlabThickness >= 250.0) pko.Keywords.Add("190");
+            if (data.SlabThickness >= 290.0) pko.Keywords.Add("230");
+            if (data.IsBN) pko.Keywords.Add("250");
             
-            PromptResult pr2 = Active.Editor.GetKeywords(pkoHeight);
+            string[] keywords = new string[pko.Keywords.Count];
+            
+            for (int i = 0; i < pko.Keywords.Count; i++)
+            {
+                keywords[i] = pko.Keywords[i].GlobalName;
+            }
 
-            if (pr2.Status != PromptStatus.OK)
+            if (keywords.Contains(data.LastMiako))
+            {
+                pko.Keywords.Default = data.LastMiako;
+            }
+            else
+            {
+                pko.Keywords.Default = keywords.Last();
+            }
+            
+            PromptResult pr = Active.Editor.GetKeywords(pko);
+            
+            if (pr.Status != PromptStatus.OK)
             {
                 Active.Editor.WriteMessage("\nPříkaz zrušen ");
                 return null;
             }
             
-            string miakoHeight = pr2.StringResult;
+            string miakoHeight = pr.StringResult;
             data.LastMiako = miakoHeight;
+            
+            NODHelper.SaveUserPromptToNOD(data);
 
+            return miakoHeight;
+        }
+        
+        private static string GetMiakoBlockName()
+        {
+            string OVN = GetMiakoOVN();
+            string miakoHeight = GetMiakoHeight();
+
+            if (miakoHeight == null || OVN == null)
+            {
+                Active.Editor.WriteMessage("\nPříkaz zrušen ");
+                return null;
+            }
+            
             string blockName = miakoHeight.Contains("PULENA")
                 ? $"MIAKO_80_{OVN}_PULENA"
                 : $"MIAKO_{miakoHeight}_{OVN}";
-            NODHelper.SaveUserPromptToNOD(data);
 
             return blockName;
         }
