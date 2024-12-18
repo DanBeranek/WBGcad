@@ -2,6 +2,7 @@ using System;
 using Gssoft.Gscad.ApplicationServices;
 using Gssoft.Gscad.DatabaseServices;
 using Gssoft.Gscad.EditorInput;
+using Gssoft.Gscad.Geometry;
 
 namespace WB_GCAD25
 {
@@ -13,7 +14,7 @@ namespace WB_GCAD25
 
         public static void UsingTranscation(Action<Transaction> action)
         {
-            using (var transaction = Active.Database.TransactionManager.StartTransaction())
+            using (var transaction = Database.TransactionManager.StartTransaction())
             {
                 action(transaction);
                 transaction.Commit();
