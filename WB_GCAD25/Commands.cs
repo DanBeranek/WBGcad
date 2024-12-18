@@ -131,6 +131,54 @@ namespace WB_GCAD25
             
             MiakoPlacer miakoPlacer = new MiakoPlacer(intervalResult, promptResult);
         }
+
+        [CommandMethod("VENCOVKY")]
+        public void PlaceVT()
+        {
+            NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
+            double slabThickness = data.SlabThickness;
+
+            string blockName = null;
+            switch (slabThickness)
+            {
+                case 210.0:
+                    blockName = "VT_8_210";
+                    break;
+                case 250.0:
+                    blockName = "VT_8_250";
+                    break;
+                case 290.0:
+                    blockName = "VT_8_290";
+                    break;
+                default:
+                    Active.Editor.WriteMessage($"\nTloušťka stropu je: {slabThickness}. Nebyla nalezena vhodná věncovka.");
+                    break;
+            }
+
+            if (blockName == null) return;
+
+            try
+            {
+                VTArrayDrawJig jigger = new VTArrayDrawJig(blockName);
+                using (Transaction tr = Active.Database.TransactionManager.StartTransaction())
+                {
+                    if (jigger.Jig())
+                    {
+                        tr.Commit();
+                    }
+                    else
+                    {
+                        tr.Abort();
+                    }
+                }
+            }
+            catch (SystemException ex)
+            {
+                Active.Editor.WriteMessage(ex.ToString());
+            }
+            
+            NODHelper.SaveUserPromptToNOD(data);
+        }
         
         [CommandMethod("MIAKO")]
         public void PlaceMiakoArray()

@@ -74,6 +74,7 @@
         <Compile Include="SpanPrompter.cs" />
         <Compile Include="SpanPromptResult.cs" />
         <Compile Include="Utils.cs" />
+        <Compile Include="VTArrayDrawJig.cs" />
     </ItemGroup>
     <ItemGroup>
       <Content Include=".gitignore" />
