@@ -74,7 +74,14 @@ namespace WB_GCAD25
                     prOptions1.Keywords.Add("Měřítko");
                     prOptions1.AppendKeywordsToMessage = true;
                     PromptPointResult prResult1 = prompts.AcquirePoint(prOptions1);
-                    if (prResult1.Status == PromptStatus.Cancel) return SamplerStatus.Cancel;
+                    if (prResult1.Status == PromptStatus.Cancel) 
+                        return SamplerStatus.Cancel;
+
+                    if (prResult1.Status == PromptStatus.Keyword)
+                    {
+                        HandleKeyword(prResult1.StringResult);
+                        return SamplerStatus.NoChange;
+                    }
 
                     if (prResult1.Value.Equals(_mInsertPt))
                     {
@@ -93,6 +100,12 @@ namespace WB_GCAD25
                     PromptPointResult prResult2 = prompts.AcquirePoint(prOptions2);
                     if (prResult2.Status == PromptStatus.Cancel) 
                         return SamplerStatus.Cancel;
+                    
+                    if (prResult2.Status == PromptStatus.Keyword)
+                    {
+                        HandleKeyword(prResult2.StringResult);
+                        return SamplerStatus.NoChange;
+                    }
 
                     if (prResult2.Value.Equals(_mEndPt))
                     {
@@ -141,6 +154,36 @@ namespace WB_GCAD25
         #endregion
 
         #region Helpers
+
+        private void HandleKeyword(string keyword)
+        {
+            switch (keyword.ToLower())
+            {
+                case "typ":
+                    PromptKeywordOptions pko = new PromptKeywordOptions("\nVyber typ izolace: ");
+                    pko.Keywords.Add("S");
+                    pko.Keywords.Add("U");
+                    pko.Keywords.Default = "S";
+                    pko.AppendKeywordsToMessage = true;
+
+                    PromptResult pRes = Active.Editor.GetKeywords(pko);
+                    if (pRes.Status == PromptStatus.OK)
+                    {
+                        _insulationType = pRes.StringResult;
+                        SetBlockDef();
+                    }
+                    break;
+                case "měřítko":
+                    PromptDoubleOptions pdo = new PromptDoubleOptions("\nZadejte tloušťku izolace: ");
+                    pdo.DefaultValue = _scale;
+                    PromptDoubleResult pRes2 = Active.Editor.GetDouble(pdo);
+                    if (pRes2.Status == PromptStatus.OK)
+                    {
+                        _scale = pRes2.Value;
+                    }
+                    break;
+            }
+        }
 
         private void SetBlockDef()
         {
