@@ -13,6 +13,7 @@ namespace WB_GCAD25
             public string LastOVN { get; set; } = "625";
             public string LastMiako { get; set; } = "190";
             public bool IsBN { get; set; } = false;
+            public double LastInsulationThickness { get; set; } = 120.0;
         }
 
         public static void SaveUserPromptToNOD(UserPromptData data)
@@ -39,7 +40,8 @@ namespace WB_GCAD25
                            new TypedValue((int)DxfCode.Real, data.LastThickness),
                            new TypedValue((int)DxfCode.Text, data.LastOVN),
                            new TypedValue((int)DxfCode.Text, data.LastMiako),
-                           new TypedValue((int)DxfCode.Int16, data.IsBN ? 1 : 0)
+                           new TypedValue((int)DxfCode.Int16, data.IsBN ? 1 : 0),
+                           new TypedValue((int)DxfCode.Real, data.LastInsulationThickness)
                        ))
                 {
                     xRec.Data = buffer;
@@ -70,6 +72,7 @@ namespace WB_GCAD25
                             result.LastOVN = (string)values[2].Value;
                             result.LastMiako = (string)values[3].Value;
                             result.IsBN = (short)values[4].Value == 1;
+                            result.LastInsulationThickness = (double)values[5].Value;
                         }
                     }
                 }
@@ -87,6 +90,7 @@ namespace WB_GCAD25
             Active.Editor.WriteMessage($"\nLastOVN: {data.LastOVN}");
             Active.Editor.WriteMessage($"\nLastMiako: {data.LastMiako}");
             Active.Editor.WriteMessage($"\nIsBN: {data.IsBN}");
+            Active.Editor.WriteMessage($"\nLastInsulationThickness: {data.LastInsulationThickness}");
         }
         
     }

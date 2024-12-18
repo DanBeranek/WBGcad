@@ -10,13 +10,13 @@ namespace WB_GCAD25
     public class InsulationDrawJig : DrawJig
     {
         #region Fields
-
+        
         private int _mCurJigFactorNumber = 1;
         private readonly int _mTotalJigFactorCount = 2;
 
         private Point3d _mInsertPt;    // Factor #1
         private Point3d _mEndPt;  // Factor #2
-        private double _scale = 120.0;
+        private double _scale = NODHelper.LoadUserPromptsFromNOD().LastInsulationThickness;
         private string _insulationType = "S";
         private string _insulationName;
         private double _mRotation;
@@ -56,8 +56,15 @@ namespace WB_GCAD25
                     tempBlock = new BlockReference(_mInsertPt, _blockDef.ObjectId);
                     tempBlock.Rotation = _mRotation;
                     tempBlock.ScaleFactors = new Scale3d(_scale, _scale, _scale);
+
+                    Vector3d offset = dir.GetPerpendicularVector().GetNormal() * _scale / 2;
+                    
+                    Line tempLine = new Line(_mInsertPt + offset, _mEndPt + offset);
+                    
                     draw.Geometry.Draw(tempBlock);
+                    draw.Geometry.Draw(tempLine);
                     tempBlock.Dispose();
+                    tempLine.Dispose();
                     break;
             }
 
@@ -174,12 +181,15 @@ namespace WB_GCAD25
                     }
                     break;
                 case "měřítko":
+                    NODHelper.UserPromptData data = NODHelper.LoadUserPromptsFromNOD();
                     PromptDoubleOptions pdo = new PromptDoubleOptions("\nZadejte tloušťku izolace: ");
                     pdo.DefaultValue = _scale;
                     PromptDoubleResult pRes2 = Active.Editor.GetDouble(pdo);
                     if (pRes2.Status == PromptStatus.OK)
                     {
                         _scale = pRes2.Value;
+                        data.LastInsulationThickness = _scale;
+                        NODHelper.SaveUserPromptToNOD(data);
                     }
                     break;
             }
