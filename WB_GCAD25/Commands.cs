@@ -130,71 +130,33 @@ namespace WB_GCAD25
             
             MiakoPlacer miakoPlacer = new MiakoPlacer(intervalResult, promptResult);
         }
-
-        [CommandMethod("MIAKO")]
-        public void PlaceMiako()
-        {
-            string blockName = GetMiakoBlockName();
-
-            if (blockName == null) return;
-
-            Active.UsingTranscation(tr =>
-            {
-                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForRead);
-
-                if (!bt.Has(blockName))
-                {
-                    Active.Editor.WriteMessage($"\nBlock {blockName} not found.");
-                    tr.Abort();
-                    return;
-                }
-
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[blockName], OpenMode.ForRead);
-
-                BlockReference br = new BlockReference(new Point3d(0, 0, 0), btr.ObjectId);
-
-                if (BlockMovingRotating.Jig(br))
-                {
-                    BlockTableRecord modelspace =
-                        (BlockTableRecord)tr.GetObject(Active.Database.CurrentSpaceId, OpenMode.ForWrite);
-                    modelspace.AppendEntity(br);
-                    Helpers.SetLayer("WB_MIAKO", br);
-                    tr.AddNewlyCreatedDBObject(br, true);
-                }
-            });
-        }
         
-        [CommandMethod("MIAKOPOLE")]
+        [CommandMethod("MIAKO")]
         public void PlaceMiakoArray()
         {
             string blockName = GetMiakoBlockName();
 
             if (blockName == null) return;
 
-            Active.UsingTranscation(tr =>
+            try
             {
-                BlockTable bt = (BlockTable)tr.GetObject(Active.Database.BlockTableId, OpenMode.ForRead);
-
-                if (!bt.Has(blockName))
+                MiakoArrayDrawJig jigger = new MiakoArrayDrawJig(blockName);
+                using (Transaction tr = Active.Database.TransactionManager.StartTransaction())
                 {
-                    Active.Editor.WriteMessage($"\nBlock {blockName} not found.");
-                    tr.Abort();
-                    return;
+                    if (jigger.Jig())
+                    {
+                        tr.Commit();
+                    }
+                    else
+                    {
+                        tr.Abort();
+                    }
                 }
-
-                BlockTableRecord btr = (BlockTableRecord)tr.GetObject(bt[blockName], OpenMode.ForRead);
-
-                BlockReference br = new BlockReference(new Point3d(0, 0, 0), btr.ObjectId);
-
-                if (BlockMovingRotating.Jig(br))
-                {
-                    BlockTableRecord modelspace =
-                        (BlockTableRecord)tr.GetObject(Active.Database.CurrentSpaceId, OpenMode.ForWrite);
-                    modelspace.AppendEntity(br);
-                    Helpers.SetLayer("WB_MIAKO", br);
-                    tr.AddNewlyCreatedDBObject(br, true);
-                }
-            });
+            }
+            catch (System.Exception ex)
+            {
+                Active.Editor.WriteMessage(ex.ToString());
+            }
         }
 
         private static string GetMiakoBlockName()
