@@ -344,7 +344,7 @@ namespace WB_GCAD25
 
             if (!result.HasValue)
             {
-                throw new Exception("Did not found solution");
+                return null;
             }
 
             var (final_n_625, final_n_500, final_n_160) = result.Value;
@@ -478,17 +478,7 @@ namespace WB_GCAD25
                 intervalsList.Insert(min_ind + 1, 160.0);
                 intervals = intervalsList.ToArray();
             }
-
-            Console.WriteLine($"width={width}");
-            Console.WriteLine($"doubled_beams={doubled_beams}");
-            Console.WriteLine($"max_ovn={max_ovn}");
-            Console.WriteLine($"result=({final_n_625}, {final_n_500}, {final_n_160})");
-            Console.WriteLine($"s_off=[{string.Join(", ", s_off)}]");
-            Console.WriteLine($"end_off=[{string.Join(", ", end_off)}]");
-            Console.WriteLine($"intervals=[{string.Join(", ", intervals)}]");
-            Console.WriteLine($"x_coords=[{string.Join(", ", x_coords)}]");
-            Console.WriteLine();
-
+            
             IntervalResult res = new IntervalResult
             {
                 XCoords = x_coords,

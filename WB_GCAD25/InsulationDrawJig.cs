@@ -42,31 +42,26 @@ namespace WB_GCAD25
             double length = dir.Length;
             _mRotation = Vector3d.XAxis.GetAngleTo(dir, Vector3d.ZAxis);
             
-            BlockReference tempBlock;
+            BlockReference tempBlock = new BlockReference(_mInsertPt, _blockDef.ObjectId);
+            tempBlock.ScaleFactors = new Scale3d(_scale, _scale, _scale);
             
             switch (_mCurJigFactorNumber)
             {
                 case 1:
-                    tempBlock = new BlockReference(_mInsertPt, _blockDef.ObjectId);
-                    tempBlock.ScaleFactors = new Scale3d(_scale, _scale, _scale);
-                    draw.Geometry.Draw(tempBlock);
-                    tempBlock.Dispose();
+                    
                     break;
                 case 2:
-                    tempBlock = new BlockReference(_mInsertPt, _blockDef.ObjectId);
                     tempBlock.Rotation = _mRotation;
-                    tempBlock.ScaleFactors = new Scale3d(_scale, _scale, _scale);
 
-                    Vector3d offset = dir.GetPerpendicularVector().GetNormal() * _scale / 2;
-                    
-                    Line tempLine = new Line(_mInsertPt + offset, _mEndPt + offset);
-                    
-                    draw.Geometry.Draw(tempBlock);
+                    Vector3d lineOffset = dir.GetPerpendicularVector().GetNormal() * _scale / 2;
+                    Line tempLine = new Line(_mInsertPt + lineOffset, _mEndPt + lineOffset);
                     draw.Geometry.Draw(tempLine);
-                    tempBlock.Dispose();
                     tempLine.Dispose();
                     break;
             }
+            
+            draw.Geometry.Draw(tempBlock);
+            tempBlock.Dispose();
 
             return true;
         }

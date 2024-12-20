@@ -132,6 +132,30 @@ namespace WB_GCAD25
             MiakoPlacer miakoPlacer = new MiakoPlacer(intervalResult, promptResult);
         }
 
+        [CommandMethod("POT")]
+        public void PlacePot()
+        {
+            try
+            {
+                PotArrayDrawJig jigger = new PotArrayDrawJig();
+                using (Transaction tr = Active.Database.TransactionManager.StartTransaction())
+                {
+                    if (jigger.Jig())
+                    {
+                        tr.Commit();
+                    }
+                    else
+                    {
+                        tr.Abort();
+                    }
+                }
+            }
+            catch (SystemException ex)
+            {
+                Active.Editor.WriteMessage(ex.ToString());
+            }
+        }
+
         [CommandMethod("VENCOVKY")]
         public void PlaceVT()
         {

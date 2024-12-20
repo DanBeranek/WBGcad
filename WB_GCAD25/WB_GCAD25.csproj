@@ -70,6 +70,7 @@
         <Compile Include="NODHelper.cs" />
         <Compile Include="PolylineAnalyzer.cs" />
         <Compile Include="PolylineJig.cs" />
+        <Compile Include="PotArrayDrawJig.cs" />
         <Compile Include="POTPlacer.cs" />
         <Compile Include="Properties\AssemblyInfo.cs"/>
         <Compile Include="SpanPrompter.cs" />
